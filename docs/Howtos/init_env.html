@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.8.1: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.10: http://docutils.sourceforge.net/" />
 <title>How to symbolically execute Linux binaries?</title>
 <link rel="stylesheet" href="../s2e.css" type="text/css" />
 </head>
@@ -17,9 +17,10 @@
 <li><a class="reference internal" href="#obtaining-and-compiling-init-env" id="id1">1. Obtaining and compiling <tt class="docutils literal">init_env</tt></a></li>
 <li><a class="reference internal" href="#configuring-s2e-for-use-with-init-env" id="id2">2. Configuring S2E for use with <tt class="docutils literal">init_env</tt></a></li>
 <li><a class="reference internal" href="#using-init-env" id="id3">3. Using <tt class="docutils literal">init_env</tt></a></li>
-<li><a class="reference internal" href="#obtaining-testcases" id="id4">4. Obtaining testcases</a></li>
-<li><a class="reference internal" href="#speeding-things-up" id="id5">5. Speeding things up</a></li>
-<li><a class="reference internal" href="#going-further-symbolic-stdin-and-files" id="id6">6. Going further: Symbolic stdin and files</a></li>
+<li><a class="reference internal" href="#analyzing-large-programs-with-concolic-execution" id="id4">4. Analyzing large programs with concolic execution</a></li>
+<li><a class="reference internal" href="#obtaining-testcases" id="id5">5. Obtaining testcases</a></li>
+<li><a class="reference internal" href="#speeding-things-up" id="id6">6. Speeding things up</a></li>
+<li><a class="reference internal" href="#going-further-symbolic-stdin-and-files" id="id7">7. Going further: Symbolic stdin and files</a></li>
 </ul>
 </div>
 <p>In this tutorial, we will show how to symbolically (or concolically) execute <em>existing</em> Linux programs,
@@ -97,8 +98,29 @@ the <tt class="docutils literal"><span class="pre">--select-process-code</span><
 <p>Additionally, <tt class="docutils literal">init_env</tt> will show a usage message if the sole argument given
 is <tt class="docutils literal"><span class="pre">--help</span></tt>.</p>
 </div>
+<div class="section" id="analyzing-large-programs-with-concolic-execution">
+<h1>4. Analyzing large programs with concolic execution</h1>
+<p>Depending on the program under analysis, normal symbolic execution may get stuck in the constraint
+solver. It is better in general to use <a class="reference external" href="Concolic.html">concolic execution</a>. The following
+command runs <tt class="docutils literal">echo</tt> in concolic mode, based on the concrete parameter <tt class="docutils literal">abc</tt> (i.e., the first
+path will print <tt class="docutils literal">abc</tt>, while the others will print other strings):</p>
+<pre class="literal-block">
+$ LD_PRELOAD=/path/to/guest/init_env/init_env.so /bin/echo --concolic abc ; /path/to/guest/s2ecmd/s2ecmd kill 0 &quot;echo done&quot;
+</pre>
+<p>Do not forget the follwing settings in the Lua file for concolic execution to be enabled:</p>
+<pre class="literal-block">
+s2e = {
+    kleeArgs = {
+        &quot;--use-concolic-execution=true&quot;,
+        &quot;--use-dfs-search=true&quot;
+    }
+}
+</pre>
+<p>You may also want to add <tt class="docutils literal">&gt; /dev/null</tt> to prevent the program from forking in the kernel
+when printing symbolic content.</p>
+</div>
 <div class="section" id="obtaining-testcases">
-<h1>4. Obtaining testcases</h1>
+<h1>5. Obtaining testcases</h1>
 <p>The command above tests <tt class="docutils literal">echo</tt> with command line arguments that could take
 <em>any value</em>. Whenever <tt class="docutils literal">echo</tt> performs a test on its command line arguments,
 S2E checks which cases could be true, and explores all possibilities. Each
@@ -124,7 +146,7 @@ $ LD_PRELOAD=/path/to/guest/init_env/init_env.so /bin/echo \
 </pre>
 </div>
 <div class="section" id="speeding-things-up">
-<h1>5. Speeding things up</h1>
+<h1>6. Speeding things up</h1>
 <p>A number of configuration options exist that can make S2E test <tt class="docutils literal">echo</tt> faster.
 These are not enabled by default because results could be confusing. Now that
 you're warned, let's add the following to <tt class="docutils literal">kleeArgs</tt> in <tt class="docutils literal">config.lua</tt>:</p>
@@ -141,7 +163,8 @@ the same time. It should not cause problems for testing programs, unless these
 actually read the content of the screen or other shared memory regions.</p>
 </div>
 <div class="section" id="going-further-symbolic-stdin-and-files">
-<h1>6. Going further: Symbolic stdin and files</h1>
+<h1>7. Going further: Symbolic stdin and files</h1>
+<p>&gt;&gt;&gt;&gt;&gt;&gt;&gt; docs: reminder about concolic mode</p>
 <p>You can easily feed symbolic data to your program via <tt class="docutils literal">stdin</tt>.
 The idea is to pipe the symbolic output of one program to the input of another.
 Symbolic output can be generated using the <tt class="docutils literal">s2ecmd</tt> utility, located in the

@@ -93,7 +93,34 @@ the ``--select-process-code`` or ``--sym-args`` argument.
 Additionally, ``init_env`` will show a usage message if the sole argument given
 is ``--help``.
 
-4. Obtaining testcases
+
+4. Analyzing large programs with concolic execution
+---------------------------------------------------
+
+Depending on the program under analysis, normal symbolic execution may get stuck in the constraint
+solver. It is better in general to use `concolic execution <Concolic.html>`_. The following
+command runs ``echo`` in concolic mode, based on the concrete parameter ``abc`` (i.e., the first
+path will print ``abc``, while the others will print other strings)::
+
+    $ LD_PRELOAD=/path/to/guest/init_env/init_env.so /bin/echo --concolic abc ; /path/to/guest/s2ecmd/s2ecmd kill 0 "echo done"
+
+Do not forget the follwing settings in the Lua file for concolic execution to be enabled:
+
+::
+
+    s2e = {
+        kleeArgs = {
+            "--use-concolic-execution=true",
+            "--use-dfs-search=true"
+        }
+    }
+
+
+You may also want to add ``> /dev/null`` to prevent the program from forking in the kernel
+when printing symbolic content.
+
+
+5. Obtaining testcases
 ----------------------
 
 The command above tests ``echo`` with command line arguments that could take
@@ -121,7 +148,7 @@ To do so, call ``s2ecmd kill`` right after calling ``echo``::
     /path/to/guest/s2ecmd/s2ecmd kill 0 "echo done"
 
 
-5. Speeding things up
+6. Speeding things up
 ---------------------
 
 A number of configuration options exist that can make S2E test ``echo`` faster.
@@ -141,8 +168,9 @@ the same time. It should not cause problems for testing programs, unless these
 actually read the content of the screen or other shared memory regions.
 
 
-6. Going further: Symbolic stdin and files
+7. Going further: Symbolic stdin and files
 ------------------------------------------
+>>>>>>> docs: reminder about concolic mode
 
 You can easily feed symbolic data to your program via ``stdin``.
 The idea is to pipe the symbolic output of one program to the input of another.
